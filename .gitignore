@@ -1,0 +1,41 @@
+# Build artefacts
+build/
+out/
+cmake-build-*/
+*.exe
+*.obj
+*.o
+*.dll
+*.pdb
+*.ilk
+*.user
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+build_log.txt
+
+# Qt
+*_autogen/
+moc_*.cpp
+moc_*.h
+ui_*.h
+qrc_*.cpp
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+
+# Local agent / scratch
+.claude/
+node_modules/
+*.tmp
+
+# OS
+Thumbs.db
+.DS_Store
