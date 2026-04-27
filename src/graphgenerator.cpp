@@ -105,6 +105,48 @@ void generateErdosRenyiGnm(Graph *g, int n, int m,
     }
 }
 
+// ====================== Random Geometric Graph (RGG) ======================
+
+void generateRandomGeometric(Graph *g, int n, double r,
+                              const WeightConfig &wc, const LayoutConfig &lc) {
+    g->clear();
+    if (n <= 0) return;
+    r = std::max(0.0, r);
+
+    auto *rng = QRandomGenerator::global();
+
+    // 画布几何参数: 把单位正方形 [0,1]^2 映射到画布上的一个正方形区域
+    double canvasR = lc.radius > 0 ? lc.radius : autoRadius(n);
+    double canvasSize = canvasR * 2.0;
+    QPointF origin = lc.center - QPointF(canvasR, canvasR);
+
+    // 在单位正方形内均匀撒点 (unitPts 用于真实距离计算)
+    QList<QPointF> unitPts;
+    QList<int> ids;
+    unitPts.reserve(n);
+    ids.reserve(n);
+    for (int i = 0; i < n; ++i) {
+        double x = rng->generateDouble();
+        double y = rng->generateDouble();
+        unitPts.append(QPointF(x, y));
+        QPointF canvasPt = origin + QPointF(x * canvasSize, y * canvasSize);
+        ids.append(g->addVertex(QString::number(i), canvasPt));
+    }
+
+    // 朴素 O(n^2) 连边: 单位正方形内 n <= 500 完全够用.
+    // 如需扩大规模可改用网格桶 (cell list) 加速到 O(n + m).
+    double r2 = r * r;
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j) {
+            double dx = unitPts[i].x() - unitPts[j].x();
+            double dy = unitPts[i].y() - unitPts[j].y();
+            if (dx * dx + dy * dy <= r2) {
+                g->addEdge(ids[i], ids[j], pickWeight(wc));
+            }
+        }
+    }
+}
+
 // ====================== Barabási-Albert ======================
 
 void generateBarabasiAlbert(Graph *g, int n, int m, int m0,

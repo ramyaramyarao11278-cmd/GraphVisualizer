@@ -27,6 +27,14 @@ void generateErdosRenyiGnm(Graph *graph, int n, int m,
                             const WeightConfig &wcfg = {},
                             const LayoutConfig &lcfg = {});
 
+// Random Geometric Graph (RGG): 在单位正方形 [0,1]^2 内均匀撒 n 个点,
+//   两点欧氏距离 <= r 时连边.
+//   连通性阈值: r_c ≈ sqrt(ln(n) / (π n)).
+//   参考: Penrose, "Random Geometric Graphs", Oxford University Press, 2003.
+void generateRandomGeometric(Graph *graph, int n, double r,
+                              const WeightConfig &wcfg = {},
+                              const LayoutConfig &lcfg = {});
+
 // Barabási-Albert: 优先连接机制的无标度网络。
 //   初始 m0 个顶点构成完全图；随后每加入 1 个新顶点就向 m 个已有顶点连边，
 //   连接概率与已有顶点的度数成正比。
@@ -43,7 +51,7 @@ void generateWattsStrogatz(Graph *graph, int n, int k, double p,
                             const WeightConfig &wcfg = {},
                             const LayoutConfig &lcfg = {});
 
-// 图指标 — 用于论文分析对比三种模型的结构差异。
+// 图指标 — 用于论文分析对比不同模型的结构差异。
 struct GraphMetrics {
     int vertexCount = 0;
     int edgeCount = 0;

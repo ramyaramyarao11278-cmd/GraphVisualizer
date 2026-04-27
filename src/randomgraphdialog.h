@@ -21,6 +21,7 @@ public:
 
 private:
     void setupERTab(QWidget *tab);
+    void setupRGGTab(QWidget *tab);
     void setupBATab(QWidget *tab);
     void setupWSTab(QWidget *tab);
     void updateExpectedInfo();
@@ -34,6 +35,11 @@ private:
     QDoubleSpinBox *m_erP;
     QSpinBox     *m_erM;
     QLabel       *m_erInfo;
+
+    // RGG
+    QSpinBox       *m_rggN;
+    QDoubleSpinBox *m_rggR;
+    QLabel         *m_rggInfo;
 
     // BA
     QSpinBox *m_baN;

@@ -97,15 +97,18 @@ RandomGraphDialog::RandomGraphDialog(QWidget *parent)
     auto *mainLayout = new QVBoxLayout(this);
 
     m_tabs = new QTabWidget;
-    auto *erTab = new QWidget;
-    auto *baTab = new QWidget;
-    auto *wsTab = new QWidget;
+    auto *erTab  = new QWidget;
+    auto *rggTab = new QWidget;
+    auto *baTab  = new QWidget;
+    auto *wsTab  = new QWidget;
     setupERTab(erTab);
+    setupRGGTab(rggTab);
     setupBATab(baTab);
     setupWSTab(wsTab);
-    m_tabs->addTab(erTab, QStringLiteral("Erdős-Rényi"));
-    m_tabs->addTab(baTab, QStringLiteral("Barabási-Albert"));
-    m_tabs->addTab(wsTab, QStringLiteral("Watts-Strogatz"));
+    m_tabs->addTab(erTab,  QStringLiteral("Erdős-Rényi"));
+    m_tabs->addTab(rggTab, QStringLiteral("随机几何图 RGG"));
+    m_tabs->addTab(baTab,  QStringLiteral("Barabási-Albert"));
+    m_tabs->addTab(wsTab,  QStringLiteral("Watts-Strogatz"));
     mainLayout->addWidget(m_tabs);
 
     // 权值设置
@@ -188,6 +191,43 @@ void RandomGraphDialog::setupERTab(QWidget *tab) {
     connect(m_erP, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, [this]{ updateExpectedInfo(); });
     connect(m_erM, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, [this]{ updateExpectedInfo(); });
+}
+
+// ====================== RGG tab ======================
+
+void RandomGraphDialog::setupRGGTab(QWidget *tab) {
+    auto *layout = new QVBoxLayout(tab);
+
+    auto *desc = new QLabel(QStringLiteral(
+        "在单位正方形 [0,1]² 内均匀撒 n 个点, 两点欧氏距离 ≤ r 时连边。\n"
+        "邻近性导致高聚类, 适合刻画无线传感网、地理邻接网络等空间场景。"));
+    desc->setWordWrap(true);
+    desc->setStyleSheet("color: #444;");
+    layout->addWidget(desc);
+
+    auto *form = new QFormLayout;
+    m_rggN = new QSpinBox;
+    m_rggN->setRange(2, 500);
+    m_rggN->setValue(50);
+    m_rggR = new QDoubleSpinBox;
+    m_rggR->setRange(0.0, 1.5);
+    m_rggR->setSingleStep(0.02);
+    m_rggR->setDecimals(3);
+    m_rggR->setValue(0.20);
+    form->addRow(QStringLiteral("顶点数 n:"), m_rggN);
+    form->addRow(QStringLiteral("连接半径 r:"), m_rggR);
+    layout->addLayout(form);
+
+    m_rggInfo = new QLabel;
+    m_rggInfo->setStyleSheet("color: #555; font-style: italic;");
+    m_rggInfo->setWordWrap(true);
+    layout->addWidget(m_rggInfo);
+    layout->addStretch();
+
+    connect(m_rggN, QOverload<int>::of(&QSpinBox::valueChanged),
+            this, [this]{ updateExpectedInfo(); });
+    connect(m_rggR, QOverload<double>::of(&QDoubleSpinBox::valueChanged),
             this, [this]{ updateExpectedInfo(); });
 }
 
@@ -289,6 +329,7 @@ void RandomGraphDialog::updateExpectedInfo() {
     int tab = m_tabs->currentIndex();
 
     if (tab == 0) {
+        // ER
         int n = m_erN->value();
         qint64 maxE = qint64(n) * (n - 1) / 2;
         if (m_erGnpRadio->isChecked()) {
@@ -299,7 +340,7 @@ void RandomGraphDialog::updateExpectedInfo() {
                 "预期: ~%1 条边, 平均度 ~%2, 最大可能边 %3\n"
                 "p ≈ ln(n)/n ≈ %4 时图几乎必然连通")
                 .arg(int(expE)).arg(avgDeg, 0, 'f', 2).arg(maxE)
-                .arg(std::log(n) / n, 0, 'f', 4));
+                .arg(std::log(double(n)) / n, 0, 'f', 4));
         } else {
             int m = m_erM->value();
             double avgDeg = 2.0 * m / n;
@@ -308,6 +349,19 @@ void RandomGraphDialog::updateExpectedInfo() {
                 .arg(m).arg(avgDeg, 0, 'f', 2).arg(maxE));
         }
     } else if (tab == 1) {
+        // RGG
+        int n = m_rggN->value();
+        double r = m_rggR->value();
+        double expE = (n * (n - 1) / 2.0) * M_PI * r * r;
+        double avgDeg = (n - 1) * M_PI * r * r;
+        double rc = std::sqrt(std::log(double(n)) / (M_PI * n));
+        m_rggInfo->setText(QStringLiteral(
+            "预期: ~%1 条边, 平均度 ~%2 (忽略边界效应)\n"
+            "连通性阈值 r_c ≈ √(ln n / (π n)) ≈ %3")
+            .arg(int(expE)).arg(avgDeg, 0, 'f', 2)
+            .arg(rc, 0, 'f', 4));
+    } else if (tab == 2) {
+        // BA
         int n = m_baN->value();
         int m = m_baM->value();
         int m0 = m_baM0->value();
@@ -321,6 +375,7 @@ void RandomGraphDialog::updateExpectedInfo() {
             .arg(totalE).arg(m0).arg(initEdges).arg(growEdges)
             .arg(avgDeg, 0, 'f', 2));
     } else {
+        // WS
         int n = m_wsN->value();
         int k = m_wsK->value();
         int totalE = n * k / 2;
@@ -357,6 +412,11 @@ QString RandomGraphDialog::apply(Graph *graph) const {
             return QStringLiteral("Erdős-Rényi G(%1, m=%2)").arg(n).arg(m);
         }
     } else if (tab == 1) {
+        int n = m_rggN->value();
+        double r = m_rggR->value();
+        GraphGenerator::generateRandomGeometric(graph, n, r, wc, lc);
+        return QStringLiteral("RGG (n=%1, r=%2)").arg(n).arg(r, 0, 'f', 3);
+    } else if (tab == 2) {
         int n = m_baN->value();
         int m = m_baM->value();
         int m0 = m_baM0->value();
